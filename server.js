@@ -14,7 +14,13 @@ const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'ijebu_forum_abuja_secret_2026';
 
 // ── MIDDLEWARE ────────────────────────────────────────────────────────────────
-app.use(cors({ origin: '*', credentials: true }));
+app.use(cors({
+  origin: '*',
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+  credentials: false
+}));
+app.options('*', cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -62,6 +68,27 @@ const addNotif = (memberId, title, body) => {
   if (!db.notifications[memberId]) db.notifications[memberId] = [];
   db.notifications[memberId].unshift({ id: uuid(), title, body, unread: true, time: new Date().toLocaleTimeString() });
 };
+
+
+// ── ROOT ROUTE ────────────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Ijebu Forum Abuja API',
+    version: '1.0.0',
+    status: 'running',
+    message: 'Welcome to Ijebu Forum Abuja Backend API',
+    endpoints: {
+      health: '/api/health',
+      login: 'POST /api/auth/login',
+      members: '/api/members',
+      docs: 'See DEPLOY.md for full endpoint list'
+    },
+    test_login: {
+      admin: { identifier: 'adebayo@ijebu.ng', password: 'admin123' },
+      member: { identifier: 'folasade@ijebu.ng', password: 'member123' }
+    }
+  });
+});
 
 // ── AUTH ROUTES ──────────────────────────────────────────────────────────────
 app.post('/api/auth/login', (req, res) => {
@@ -477,6 +504,15 @@ app.get('/api/leaderboard', auth, (req, res) => {
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString(), members: db.members.length }));
 
 // ── START ─────────────────────────────────────────────────────────────────────
+// ── 404 HANDLER ──────────────────────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Route not found',
+    hint: 'Try GET /api/health or POST /api/auth/login',
+    available: ['/api/health','/api/auth/login','/api/members','/api/tasks','/api/finance/summary']
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Ijebu Forum API running on port ${PORT}`);
   console.log(`Health: http://localhost:${PORT}/api/health`);
